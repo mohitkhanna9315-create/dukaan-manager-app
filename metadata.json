@@ -1,0 +1,5 @@
+{
+  "name": "Dukaan Inventory Manager",
+  "description": "A simple and mobile-friendly inventory management app for local shopkeepers to track stock, prices, and categories with low-stock alerts.",
+  "requestFramePermissions": []
+}
