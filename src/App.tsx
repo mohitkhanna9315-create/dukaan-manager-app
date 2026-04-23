@@ -85,80 +85,7 @@ import {
 const CATEGORIES: Category[] = ['Rashan', 'Sabzi', 'Doodh', 'Masala', 'Other'];
 const UNITS: Unit[] = ['kg', 'gm', 'Litre', 'Quantity'];
 
-const TRANSLATIONS = {
-  hi: {
-    inventory: 'Maal (Stock)',
-    history: 'Hisaab-Kitab',
-    khata: 'Khata',
-    search: 'Samaan dhoondhein...',
-    add_item: 'Naya Samaan',
-    low_stock: 'Kam Maal',
-    net_hisaab: 'Net Hisaab',
-    daily_sales: 'Aaj ki Bikri',
-    most_selling: 'Sabse Zyada Bikne Wala',
-    pending_udhaar: 'Market ka Udhaar',
-    business_health: 'Business Health',
-    order_list: 'Mangwane Wala Maal',
-    download_report: 'Report Download',
-    backup: 'Backup Lein',
-    language: 'English',
-    expiry: 'Expiry Date',
-    share: 'Hisaab Share',
-    whatsapp: 'WhatsApp Reminder',
-    total_lena: 'Total Lena',
-    total_dena: 'Total Dena',
-    balance: 'Baqaya',
-    stock: 'Stock',
-    price: 'Keemat',
-    category: 'Category',
-    unit: 'Unit',
-    save: 'Save Karein',
-    cancel: 'Cancel',
-    edit_shop: 'Dukaan Edit',
-    logout: 'Logout',
-    account: 'Account Settings',
-    dark_mode: 'Dark Mode',
-    light_mode: 'Light Mode',
-    delete_customer: 'Customer Delete',
-    install_app: 'App Install Karein'
-  },
-  en: {
-    inventory: 'Inventory',
-    history: 'History',
-    khata: 'Khata',
-    search: 'Search items...',
-    add_item: 'New Item',
-    low_stock: 'Low Stock',
-    net_hisaab: 'Net Balance',
-    daily_sales: 'Daily Sales',
-    most_selling: 'Most Selling',
-    pending_udhaar: 'Pending Udhaar',
-    business_health: 'Business Health',
-    order_list: 'Order List',
-    download_report: 'Download Report',
-    backup: 'Backup Data',
-    language: 'Hindi',
-    expiry: 'Expiry Date',
-    share: 'Share Hisab',
-    whatsapp: 'WhatsApp Reminder',
-    total_lena: 'Total Lena',
-    total_dena: 'Total Dena',
-    balance: 'Balance',
-    stock: 'Stock',
-    price: 'Price',
-    category: 'Category',
-    unit: 'Unit',
-    save: 'Save',
-    cancel: 'Cancel',
-    delete_customer: 'Delete Customer',
-    edit_shop: 'Edit Shop',
-    logout: 'Logout',
-    account: 'Account Settings',
-    dark_mode: 'Dark Mode',
-    light_mode: 'Light Mode',
-    install_app: 'Install App'
-  }
-};
+import { TRANSLATIONS, Language } from './translations';
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -196,7 +123,8 @@ export default function App() {
     price: '',
     quantity: '',
     unit: 'Quantity' as Unit,
-    expiryDate: ''
+    expiryDate: '',
+    lowStockThreshold: '5'
   });
 
   const [customerFormData, setCustomerFormData] = useState({
@@ -213,7 +141,10 @@ export default function App() {
   const [shopName, setShopName] = useState(() => localStorage.getItem('shopName') || 'Dukaan Manager');
   const [isShopNameModalOpen, setIsShopNameModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState(shopName);
-  const [language, setLanguage] = useState<'en' | 'hi'>(() => (localStorage.getItem('language') as 'en' | 'hi') || 'hi');
+  const [downloadLink, setDownloadLink] = useState(() => localStorage.getItem('downloadLink') || (import.meta as any).env.VITE_MOBILE_APP_URL || '');
+  const [newDownloadLink, setNewDownloadLink] = useState(downloadLink);
+  const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('language') as Language) || 'en');
+  const [newLanguage, setNewLanguage] = useState<Language>(language);
   const [isListening, setIsListening] = useState(false);
   const [isBusinessHealthOpen, setIsBusinessHealthOpen] = useState(false);
   const [isOrderListPageOpen, setIsOrderListPageOpen] = useState(false);
@@ -229,7 +160,7 @@ export default function App() {
     }
   }, [toast]);
 
-  const t = (key: keyof typeof TRANSLATIONS['hi']) => TRANSLATIONS[language][key] || key;
+  const t = (key: keyof typeof TRANSLATIONS['en']) => TRANSLATIONS[language][key] || key;
 
   // --- Language Effect ---
   useEffect(() => {
@@ -455,11 +386,12 @@ export default function App() {
         price: product.price.toString(),
         quantity: product.quantity.toString(),
         unit: product.unit || 'Quantity',
-        expiryDate: product.expiryDate || ''
+        expiryDate: product.expiryDate || '',
+        lowStockThreshold: (product.lowStockThreshold || 5).toString()
       });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', category: 'Rashan', price: '', quantity: '', unit: 'Quantity', expiryDate: '' });
+      setFormData({ name: '', category: 'Rashan', price: '', quantity: '', unit: 'Quantity', expiryDate: '', lowStockThreshold: '5' });
     }
     setIsModalOpen(true);
   };
@@ -478,7 +410,8 @@ export default function App() {
       quantity: parseInt(formData.quantity) || 0,
       unit: formData.unit,
       ownerId: user.uid,
-      expiryDate: formData.expiryDate
+      expiryDate: formData.expiryDate,
+      lowStockThreshold: parseInt(formData.lowStockThreshold) || 5
     };
 
     try {
@@ -488,7 +421,7 @@ export default function App() {
       const currentFormData = { ...formData };
       const currentEditingProduct = editingProduct;
       
-      setFormData({ name: '', category: 'Rashan', price: '', quantity: '', unit: 'Quantity', expiryDate: '' });
+      setFormData({ name: '', category: 'Rashan', price: '', quantity: '', unit: 'Quantity', expiryDate: '', lowStockThreshold: '5' });
       setEditingProduct(null);
       setIsSyncing(false);
 
@@ -852,17 +785,17 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const lowStockCount = products ? products.filter(p => p.quantity < 5).length : 0;
+  const lowStockCount = products ? products.filter(p => p.quantity < (p.lowStockThreshold || 5)).length : 0;
   const totalLena = customers ? customers.reduce((acc, c) => acc + (c.balance > 0 ? c.balance : 0), 0) : 0;
   const totalDena = customers ? customers.reduce((acc, c) => acc + (c.balance < 0 ? Math.abs(c.balance) : 0), 0) : 0;
   const netBalance = totalLena - totalDena;
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
-          <p className="text-slate-500 font-medium">Loading...</p>
+          <Loader2 className="w-12 h-12 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto" />
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Loading...</p>
         </div>
       </div>
     );
@@ -870,32 +803,32 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-8"
+          className="bg-white dark:bg-slate-800 w-full max-w-md p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-700 space-y-8"
         >
           <div className="text-center space-y-2">
-            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-200">
+            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-200 dark:shadow-none">
               <Store className="text-white" size={32} />
             </div>
-            <h1 className="text-3xl font-black text-slate-800">Dukaan Manager</h1>
-            <p className="text-slate-500 font-medium">
+            <h1 className="text-3xl font-black text-slate-800 dark:text-white">Dukaan Manager</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
               {isLogin ? 'Login karke apna stock manage karein' : 'Naya account banayein'}
             </p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Email Address</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={20} />
                 <input 
                   type="email"
                   required
                   placeholder="name@example.com"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   value={authFormData.email}
                   onChange={(e) => setAuthFormData({ ...authFormData, email: e.target.value })}
                 />
@@ -903,21 +836,21 @@ export default function App() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Password</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={20} />
                 <input 
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                  className="w-full pl-12 pr-12 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   value={authFormData.password}
                   onChange={(e) => setAuthFormData({ ...authFormData, password: e.target.value })}
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -925,7 +858,7 @@ export default function App() {
             </div>
 
             {authError && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-medium border border-red-100 flex items-center gap-2">
+              <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-2xl text-sm font-medium border border-red-100 dark:border-red-900/30 flex items-center gap-2">
                 <AlertTriangle size={16} />
                 {authError}
               </div>
@@ -934,7 +867,7 @@ export default function App() {
             <button 
               type="submit"
               disabled={authLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-indigo-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               {authLoading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Login Karein' : 'Signup Karein')}
             </button>
@@ -944,7 +877,7 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-indigo-600 font-bold hover:underline"
+              className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
             >
               {isLogin ? 'Naya account banayein (Signup)' : 'Purana account hai? Login karein'}
             </button>
@@ -1028,19 +961,6 @@ export default function App() {
 
                       <button 
                         onClick={() => {
-                          setLanguage(language === 'hi' ? 'en' : 'hi');
-                          setIsMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-colors"
-                      >
-                        <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                          <Languages size={18} />
-                        </div>
-                        <span className="font-medium">{t('language')}</span>
-                      </button>
-
-                      <button 
-                        onClick={() => {
                           downloadBackup();
                           setIsMenuOpen(false);
                         }}
@@ -1054,6 +974,9 @@ export default function App() {
 
                       <button 
                         onClick={() => {
+                          setNewShopName(shopName);
+                          setNewDownloadLink(downloadLink);
+                          setNewLanguage(language);
                           setIsShopNameModalOpen(true);
                           setIsMenuOpen(false);
                         }}
@@ -1065,16 +988,34 @@ export default function App() {
                         <span className="font-medium">{t('edit_shop')}</span>
                       </button>
 
-                      {deferredPrompt && (
-                        <button 
-                          onClick={handleInstallApp}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl transition-colors"
-                        >
-                          <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                            <Download size={18} />
-                          </div>
-                          <span className="font-medium">{t('install_app')}</span>
-                        </button>
+                      {(deferredPrompt || downloadLink) && (
+                        <div className="space-y-1">
+                          {deferredPrompt && (
+                            <button 
+                              onClick={handleInstallApp}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl transition-colors"
+                            >
+                              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                                <Download size={18} />
+                              </div>
+                              <span className="font-medium">{t('install_app')}</span>
+                            </button>
+                          )}
+
+                          {downloadLink && (
+                            <a 
+                              href={downloadLink}
+                              download
+                              onClick={() => setToast({ message: 'Download shuru ho raha hai...', type: 'success' })}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl transition-colors"
+                            >
+                              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                                <Download size={18} />
+                              </div>
+                              <span className="font-bold">{t('download_app')}</span>
+                            </a>
+                          )}
+                        </div>
                       )}
 
                       <div className="h-px bg-slate-200/50 dark:bg-slate-700/50 my-2 mx-3" />
@@ -1340,7 +1281,7 @@ export default function App() {
                           exit={{ opacity: 0, scale: 0.95 }}
                           key={product.id}
                           className={`bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-sm border-l-4 transition-all ${
-                            product.quantity < 5 ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : 'border-indigo-500'
+                            product.quantity < (product.lowStockThreshold || 5) ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : 'border-indigo-500'
                           }`}
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -1821,6 +1762,18 @@ export default function App() {
                     </div>
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">{t('low_stock_threshold')}</label>
+                    <input 
+                      required
+                      type="number"
+                      placeholder="5"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm text-slate-800 dark:text-white"
+                      value={formData.lowStockThreshold}
+                      onChange={(e) => setFormData({...formData, lowStockThreshold: e.target.value})}
+                    />
+                  </div>
+
                   <button 
                     type="submit"
                     disabled={isSyncing}
@@ -2152,9 +2105,9 @@ export default function App() {
               </div>
               
               <div className="space-y-4">
-                {products && products.filter(p => p.quantity < 5).length > 0 ? (
+                {products && products.filter(p => p.quantity < (p.lowStockThreshold || 5)).length > 0 ? (
                   <div className="grid gap-3">
-                    {products.filter(p => p.quantity < 5).map(product => (
+                    {products.filter(p => p.quantity < (p.lowStockThreshold || 5)).map(product => (
                       <div key={product.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl">
                         <div>
                           <p className="font-bold text-slate-800 dark:text-white">{product.name}</p>
@@ -2179,7 +2132,7 @@ export default function App() {
               
               <button 
                 onClick={() => {
-                  const list = products?.filter(p => p.quantity < 5).map(p => `- ${p.name} (${p.quantity} ${p.unit} left)`).join('\n');
+                  const list = products?.filter(p => p.quantity < (p.lowStockThreshold || 5)).map(p => `- ${p.name} (${p.quantity} ${p.unit} left)`).join('\n');
                   const message = `Order List:\n${list}`;
                   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
                   window.open(whatsappUrl, '_blank');
@@ -2213,33 +2166,79 @@ export default function App() {
               className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl p-8"
             >
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Shop Profile</h2>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('shop_profile')}</h2>
                 <button onClick={() => setIsShopNameModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X /></button>
               </div>
               
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-500 dark:text-slate-400 ml-1">Dukaan ka Naam</label>
-                  <input 
-                    type="text"
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white"
-                    value={newShopName}
-                    onChange={(e) => setNewShopName(e.target.value)}
-                    placeholder="Dukaan ka naam likhein..."
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 dark:text-slate-400 ml-1">{t('shop_name')}</label>
+                    <input 
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white"
+                      value={newShopName}
+                      onChange={(e) => setNewShopName(e.target.value)}
+                      placeholder={t('shop_name_placeholder')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 dark:text-slate-400 ml-1">{t('download_link')}</label>
+                    <input 
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white"
+                      value={newDownloadLink}
+                      onChange={(e) => setNewDownloadLink(e.target.value)}
+                      placeholder="https://example.com/app.apk"
+                    />
+                    <p className="text-[10px] text-slate-400 ml-1">{t('download_link_hint')}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 dark:text-slate-400 ml-1">{t('language')}</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white appearance-none"
+                      value={newLanguage}
+                      onChange={(e) => setNewLanguage(e.target.value as Language)}
+                    >
+                      <option value="en">English</option>
+                      <option value="hi_in">हिंदी (Hindi)</option>
+                      <option value="hi">Hinglish</option>
+                    </select>
+                  </div>
                 </div>
 
                 <button 
                   onClick={() => {
                     setShopName(newShopName);
+                    setDownloadLink(newDownloadLink);
+                    setLanguage(newLanguage);
                     localStorage.setItem('shopName', newShopName);
+                    localStorage.setItem('downloadLink', newDownloadLink);
                     setIsShopNameModalOpen(false);
+                    setToast({ message: 'Settings saved!', type: 'success' });
                   }}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-indigo-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                   <Save size={20} />
-                  Save Karein
+                  {t('save')}
                 </button>
+
+                {downloadLink && (
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-3 text-center uppercase tracking-widest">Mobile App</p>
+                    <a 
+                      href={downloadLink}
+                      download
+                      onClick={() => setToast({ message: 'Download shuru ho raha hai...', type: 'success' })}
+                      className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl font-black text-lg shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                    >
+                      <Download size={20} />
+                      {t('download_app')}
+                    </a>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -2265,6 +2264,24 @@ export default function App() {
           <p className="text-lg font-black text-red-600 dark:text-red-400">{lowStockCount}</p>
         </div>
       </div>
+
+      {/* Mobile Download Button */}
+      {downloadLink && (
+        <motion.div 
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="fixed bottom-24 right-6 z-50 sm:hidden"
+        >
+          <a 
+            href={downloadLink}
+            download
+            onClick={() => setToast({ message: 'Download shuru ho raha hai...', type: 'success' })}
+            className="w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-transform"
+          >
+            <Download size={24} />
+          </a>
+        </motion.div>
+      )}
     </div>
   );
 }

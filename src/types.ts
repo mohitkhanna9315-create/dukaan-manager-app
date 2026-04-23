@@ -7,6 +7,7 @@ export interface Product {
   unit: Unit;
   ownerId: string;
   expiryDate?: string; // ISO format or YYYY-MM-DD
+  lowStockThreshold?: number;
 }
 
 export interface Customer {
